@@ -1,7 +1,7 @@
 # A005-Integrated-User-Interface-for-the-Control-of-a-Deep-Tunnel-Robotic-Platform
 
-This is the repository for my Final Year Project in Nanyang Technological University (NTU) title:
-A005: Integrated User Interface for the Control of a Deep Tunnel Robotic Platform
+This is the repository for my Final Year Project in Nanyang Technological University (NTU) <br />
+Title: A005: Integrated User Interface for the Control of a Deep Tunnel Robotic Platform
 
 The C++ require the installation of the below module:
 - OpenCV4 ( [Open Source ComputerVision Library](https://github.com/opencv/opencv) )
