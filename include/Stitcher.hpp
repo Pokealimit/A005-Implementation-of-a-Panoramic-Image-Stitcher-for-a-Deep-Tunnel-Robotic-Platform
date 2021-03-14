@@ -15,10 +15,11 @@
 #include <opencv2/stitching.hpp>		// stitcher
 #include <opencv2/core.hpp>				// addweighted()
 #include <opencv2/core/types.hpp>		// Mat type (CV64FC1)
-// #include <opencv2/stitching/detail/blenders.hpp>		// multiband blender
+#include <opencv2/flann.hpp>			// hierarchicalClustering()
 #include <Eigen/Dense>					// Include Eigen Matrices Manipulation
 #include <iostream>						// cout
 #include <string>						// string
+
 
 using namespace std;
 using namespace cv;
@@ -37,6 +38,9 @@ namespace A005 {
 		// Stitching 2 frames
 		// frame1 (frame n+1) // frame2 (frame n)
 		static Mat stitch2frames(Mat frame1, Mat frame2);
+		// For checking distribution of feature points to see if good match before stitching
+		// frame1 (n+1) | frame2(n)
+		static int Check_Points_Distribution(Mat frame1, Mat frame2);
 		// Get current set Lowe's Ratio
 		static float get_ratio();
 		// changing lowe's ratio number
@@ -67,6 +71,10 @@ namespace A005 {
 		static int width_allowance;
 		static float perc_width_fixed;
 		static float perc_width_moving;
+
+		static int Min_Num_Clusters;
+		static int Min_Num_MatchedFeaturePoints;
+		static float Avg_Dist_Btw_Clusters;
 	};
 
 

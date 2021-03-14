@@ -309,13 +309,17 @@ namespace A005 {
 		A0 = A.householderQr().solve(xp);
 		B0 = A.householderQr().solve(yp);
 
-		cout << "A : \n" << A << endl;
-		cout << "A0 : \n" << A0 << endl;
-		cout << "B0 : \n" << B0 << endl;
+		// cout << "A : \n" << A << endl;
+		// cout << "A0 : \n" << A0 << endl;
+		// cout << "B0 : \n" << B0 << endl;
 		double relative_error_A = (A * A0 - xp).norm() / xp.norm();
 		double relative_error_B = (A * B0 - yp).norm() / yp.norm();
 		double relative_error = relative_error_A + relative_error_B;
-		cout << "The relative error is: " << relative_error << endl;
+		// cout << "The relative error A is: " << relative_error_A << endl;
+		// cout << "The relative error B is: " << relative_error_B << endl;
+		cout << "The relative error Total is: " << relative_error << endl;
+		// if(isnan(relative_error_A) || isnan(relative_error_B) || isnan(relative_error)) return Mat{};
+		if(isnan(relative_error)) return Mat{};
 
 		// creating xmap and ymap (Sixth Order Polynomial)
 		Mat_<float> map_x(blend_crop.size()), map_y(blend_crop.size());
@@ -338,9 +342,9 @@ namespace A005 {
 			circle(compare_template_corner_w, cvPoint(Corner_pts(i, 0), Corner_pts(i, 1)), 1, Scalar(0, 255, 0), 5, 8, 0);
 
 		remap(blend_crop, result, map_x, map_y, INTER_LINEAR, BORDER_CONSTANT, Scalar(0, 0, 0));
-		remap(compare_template_corner_w, compare_template_corner_w, map_x, map_y, INTER_LINEAR, BORDER_CONSTANT, Scalar(0, 0, 0));
-		for (int i = 0; i < (left_edge_pts.size()+right_edge_pts.size()); i++) 
-			circle(compare_template_corner_w, cvPoint(Template_pts(i, 0), Template_pts(i, 1)), 1, Scalar(0, 0, 255), 5, 8, 0);
+		// remap(compare_template_corner_w, compare_template_corner_w, map_x, map_y, INTER_LINEAR, BORDER_CONSTANT, Scalar(0, 0, 0));
+		// for (int i = 0; i < (left_edge_pts.size()+right_edge_pts.size()); i++) 
+		// 	circle(compare_template_corner_w, cvPoint(Template_pts(i, 0), Template_pts(i, 1)), 1, Scalar(0, 0, 255), 5, 8, 0);
 
 		// imshow("compare template and corner warpped",compare_template_corner_w); waitKey(0);
 		// imwrite("compare_temp_corner_afterwarp.jpg",compare_template_corner_w);
@@ -354,7 +358,6 @@ namespace A005 {
 		// absdiff(blend_crop_grey,result_grey,diff_btw_frames);
 		// imshow("absolute difference",diff_btw_frames); waitKey(0);
 		// imwrite("./result/absdiff_frame0-5.jpg",diff_btw_frames);
-
 
 		return result;
 	}
@@ -405,17 +408,162 @@ namespace A005 {
 		return result;
 	}
 
+	int stitching_program::Check_Points_Distribution(Mat frame1, Mat frame2){
+		Mat frame1_gray, frame2_gray;																// Storing frames
+		vector<Point2f> edge_points, obj, scene;													// Store points
+		vector <KeyPoint> keypoints1, keypoints2;													// Storing keypoints
+		Mat des1, des2,result;																		// Storing Descriptors and results
+		Ptr<SIFT> detector = SIFT::create();														// Initialise Sift Detector
+		Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create(DescriptorMatcher::FLANNBASED);	// Initialise FLANN Matcher
+		vector<vector<DMatch>> matches;																// Store matches
+		vector<DMatch> good_matches;																// Store good matches																			// to keep track of number of stitching
+
+		// convert to grayscale for keypoints detection
+		cvtColor(frame1, frame1_gray, CV_BGR2GRAY);
+		cvtColor(frame2, frame2_gray, CV_BGR2GRAY);
+
+		// Compute feature points and descriptors
+		detector->detectAndCompute(frame1_gray, noArray(), keypoints1, des1);
+		detector->detectAndCompute(frame2_gray, noArray(), keypoints2, des2);
+		// Match feature points
+		matcher->knnMatch(des1, des2, matches, 2);
+		// only get good matching points using Lowe's ratio test
+		for (int i = 0; i < matches.size(); ++i)
+		{
+			if (matches[i][0].distance < ratio * matches[i][1].distance)
+			{
+				good_matches.push_back(matches[i][0]);
+			}
+		}
+		// Draw lines of good matches
+		drawMatches(frame1, keypoints1, frame2, keypoints2, good_matches, result, Scalar(0, 0, 255), Scalar(0, 0, 255));
+		// -- Get the keypoints from the good matches
+		for (size_t i = 0; i < good_matches.size(); i++){
+			obj.push_back(keypoints1[good_matches[i].queryIdx].pt);
+			scene.push_back(keypoints2[good_matches[i].trainIdx].pt);
+		}
+		
+		/* K Means Clustering */
+		// Mat labels, centers;
+		// int K=2, attempts=10, flags=KMEANS_RANDOM_CENTERS;
+		// TermCriteria tc;
+		// kmeans(obj,K,labels,tc,attempts,flags,centers);
+		// Mat centers_points = centers.reshape(2,centers.rows);
+
+		// Scalar colorTab[] =
+    	// {
+        // Scalar(0, 0, 255),
+        // Scalar(0,255,0),
+        // Scalar(255,100,100),
+        // Scalar(255,0,255),
+        // Scalar(0,255,255)
+    	// };
+
+		// Mat drawing;
+		// drawing = frame1.clone();
+		// vector<Point2f> contour0, contour1;	
+		
+		// cout << "Centers Points :\n" << centers_points << endl;
+
+		// // for drawing cluster center points
+		// for(int i=0; i < centers_points.rows; i++)
+		// 	circle(drawing,centers_points.at<Point2f>(i),1,colorTab[3],5,8,0);
+		
+		// // cout << "labels :" << endl << labels << endl;
+
+		// // for drawing good matching points
+		// for( int i = 0; i < obj.size(); i++ )
+        // {
+        //     int clusterIdx = labels.at<int>(i);
+        //     // circle( drawing, obj[i], 2, colorTab[clusterIdx], FILLED, LINE_AA );
+		// 	circle(drawing,obj[i],1,colorTab[clusterIdx],5,8,0);
+
+		// 	if(clusterIdx) contour1.push_back(obj[i]);
+		// 	else contour0.push_back(obj[i]);
+        // }
+
+		// // for calculating area of clusters
+		// double area0 = contourArea(contour0);
+		// double area1 = contourArea(contour1);
+		// vector<Point> approx0, approx1;
+		// approxPolyDP(contour0, approx0, 5, true);
+		// approxPolyDP(contour1, approx1, 5, true);
+		// double area01 = contourArea(approx0);
+		// double area11 = contourArea(approx1);
+		// cout << "area0 =" << area0 << endl << "area01 =" << area01 << endl << "approx poly vertices" << approx0.size() << endl;
+		// cout << "area1 =" << area1 << endl << "area11 =" << area11 << endl << "approx poly vertices" << approx1.size() << endl;
+
+		// imshow("cluster points",drawing); waitKey(0);
+		// return drawing;
+
+		/* Hierachical Clustering */
+		cvflann::KMeansIndexParams kmean_params(32,100,cvflann::FLANN_CENTERS_KMEANSPP);
+		// cvflann::KMeansIndexParams kmean_params(32,100,cvflann::FLANN_CENTERS_RANDOM);
+		Mat1f samples(obj.size(),2);
+
+		for(int i=0;i<obj.size();i++){
+			samples(i,0) = obj[i].x;
+			samples(i,1) = obj[i].y;
+		}
+		Mat1f centers(obj.size(),2);
+		// int true_number_clusters = flann::hierarchicalClustering<cv::L2<float> >(samples,centers,kmean_params);
+		int true_number_clusters = flann::hierarchicalClustering<cvflann::L2<float>>(samples,centers,kmean_params);
+		// int true_number_clusters = flann::hierarchicalClustering(samples,centers,kmean_params,100);
+		centers = centers.rowRange(cv::Range(0,true_number_clusters));
+
+		Mat drawing;
+		drawing = frame1.clone();
+		// for drawing points matching points
+		for(int i=0; i < obj.size(); i++)
+			circle(drawing,obj[i],1,Scalar(0,255,0),5,8,0);		
+		
+		cout << "Centers Points :\n" << centers << endl;
+		// for drawing cluster points
+		for(int i=0; i < centers.rows; i++)
+			circle(drawing,centers.at<Point2f>(i),3,Scalar(0,0,255),5,8,0);
+		
+		
+		cout << "Number of Cluster Points :\t" << centers.rows << endl;
+		cout << "Number of Matched Feature Points :\t" << obj.size() << endl;
+		// imshow("cluster points",drawing); waitKey(0);
+
+		if (centers.rows < Min_Num_Clusters || obj.size() < Min_Num_MatchedFeaturePoints)
+			return 0;
+
+		/* Calculating Average Distance Between Each Cluster Points */
+		float dist_btw_clusters = 0;
+		for(int i=0; i<centers.rows; i++){
+			float distance = 0;
+			for(int j = i; j<centers.rows; j++)
+				distance += norm(centers.at<Point2f>(j) - centers.at<Point2f>(j+1));
+			float avg_dist = distance / (centers.rows - i);
+			dist_btw_clusters += avg_dist;
+		}
+		float avg_dist_btw_clusters = dist_btw_clusters / centers.rows;
+		cout << "Average Dist. Btw Clusters :\t" << avg_dist_btw_clusters << endl;
+
+		if (avg_dist_btw_clusters < Avg_Dist_Btw_Clusters)
+			return 0;
+
+		return 1;
+
+	}
+
 	// initalizers
-	float stitching_program::ratio {0.7};				// As in Lowe's paper, can be tuned (default 0.8)
-	int stitching_program::left_row{20};				// pts on left edge, nuumbers of rows of pts
-	int stitching_program::left_col{2};					// pts on left edge, numbers of cols of pts
-	int stitching_program::middle_row{10};				// pts on middle, number of rows of pts
-	int stitching_program::middle_col{8};				// pts on middle, number of cols of pts
-	int stitching_program::right_row{20};				// pts on right edge, numbers of rows of pts
-	int stitching_program::right_col{2};				// pts on right edge, numbers of rows of pts
-	int stitching_program::width_allowance{80};			// allowance for the extra width of blended frame to n frame size
-	float stitching_program::perc_width_fixed{0.25};	// % of blended frame width to be used for mapping fixed pts
-	float stitching_program::perc_width_moving{0.25};	// % of n frame width to be used for mapping moving pts
+	float stitching_program::ratio {0.7};						// As in Lowe's paper, can be tuned (default 0.8)
+	int stitching_program::left_row{20};						// pts on left edge, nuumbers of rows of pts
+	int stitching_program::left_col{2};							// pts on left edge, numbers of cols of pts
+	int stitching_program::middle_row{10};						// pts on middle, number of rows of pts
+	int stitching_program::middle_col{8};						// pts on middle, number of cols of pts
+	int stitching_program::right_row{20};						// pts on right edge, numbers of rows of pts
+	int stitching_program::right_col{2};						// pts on right edge, numbers of rows of pts
+	int stitching_program::width_allowance{80};					// allowance for the extra width of blended frame to n frame size
+	float stitching_program::perc_width_fixed{0.25};			// % of blended frame width to be used for mapping fixed pts
+	float stitching_program::perc_width_moving{0.25};			// % of n frame width to be used for mapping moving pts
+
+	int stitching_program::Min_Num_Clusters{20};					// Min. Number of Cluster Points
+	int stitching_program::Min_Num_MatchedFeaturePoints{50};	// Min. Number of Matched Feature Points
+	float stitching_program::Avg_Dist_Btw_Clusters{400};		// Min. Average Distance between each Cluster Point
 
 	float stitching_program::get_ratio(){ return stitching_program::ratio;}
 	void stitching_program::change_ratio(int r) {
