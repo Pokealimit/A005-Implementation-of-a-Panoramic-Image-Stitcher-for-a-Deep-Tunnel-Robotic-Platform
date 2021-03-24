@@ -1,6 +1,7 @@
 #include "include/Stitcher.hpp"
 #include "include/data_cleaning.hpp"
 //#include "LaplacianBlending.h"
+#include <opencv2/photo.hpp>			// for inpaint()
 
 
 using namespace A005;
@@ -30,8 +31,8 @@ int main() {
 	stitching_program::change_perc_width_fixed(0.41);
 
 	/* Check if good match before stitching */
-	// f1 = imread("../Unwarped_Frames/unwarped frame 7.bmp");
-	// f2 = imread("../Unwarped_Frames/unwarped frame 0.bmp");
+	// Mat f1 = imread("../Unwarped_Frames/unwarped frame 7.bmp");
+	// Mat f2 = imread("../Unwarped_Frames/unwarped frame 0.bmp");
 	// rotate(f1, f1, ROTATE_90_COUNTERCLOCKWISE);
 	// rotate(f2, f2, ROTATE_90_COUNTERCLOCKWISE);	
 	// int fit = stitching_program::Check_Points_Distribution(f1,f2);
@@ -250,6 +251,49 @@ int main() {
 		hconcat(f2_left,stitchedmap_clean,combined);
 		imshow("combined",combined); waitKey(0);
 	}*/
+
+	/* removing glare from image */
+	// Mat frame = imread("../Unwarped_Frames/unwarped frame 0.bmp");
+    // if (frame.empty())
+    // {
+    //     cout << "Could not read image file." << endl;
+    //     return 1;
+    // }
+	// rotate(frame, frame, ROTATE_90_COUNTERCLOCKWISE);
+	// imshow("original",frame); waitKey(0);
+    
+	// Mat hsv;
+    // cvtColor(frame, hsv, CV_BGR2HSV);
+
+    // for (int j = 0; j < frame.rows; j++)
+    //     for (int i = 0; i < frame.cols; i++)
+    //         hsv.at<Vec3b>(j, i)[1] = 255;
+	// Mat result;
+    // cvtColor(hsv, result, CV_HSV2BGR);
+    // imshow("frame", result); waitKey(0);
+	
+	// Mat yuv;
+	// cvtColor(frame, yuv, CV_BGR2YUV);
+	// vector<Mat> channels;
+	// split(yuv, channels);
+	// equalizeHist(channels[0], channels[0]);
+	// merge(channels, yuv);
+	// cvtColor(yuv, frame, CV_YUV2BGR);
+	// imshow("frame",frame); waitKey(0);
+
+	// Mat frame_gray;
+	// cvtColor(frame,frame_gray,COLOR_BGR2GRAY);
+	// // Mat gaus;
+	// // adaptiveThreshold(frame_gray, gaus, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, 31, 8);
+	// // imshow("Gaussian", gaus); waitKey(0);
+	// Mat mask;
+	// threshold(frame_gray, mask, 225, 255, THRESH_BINARY);
+	// imshow("mask",mask); waitKey(0);
+	// Mat result;
+	// inpaint(frame,mask,result,21,INPAINT_TELEA);	// Use the algorithm proposed by Alexandru Telea
+	// // inpaint(frame,mask,result,21,INPAINT_NS);		// Use Navier-Stokes based method.
+	// imshow("after inpaint",result); waitKey(0);
+	
 
 	return 0;
 }

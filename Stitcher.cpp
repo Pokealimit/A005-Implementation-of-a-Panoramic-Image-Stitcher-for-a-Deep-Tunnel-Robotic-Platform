@@ -442,111 +442,237 @@ namespace A005 {
 			obj.push_back(keypoints1[good_matches[i].queryIdx].pt);
 			scene.push_back(keypoints2[good_matches[i].trainIdx].pt);
 		}
+
+		/* Findind translation of f1 to find overlap area */
+		Mat H = findHomography(obj,scene,RANSAC);
+		double x_trans = (H.at<double>(0,2) > H.at<double>(2,0)) ? H.at<double>(0,2) : H.at<double>(2,0);
+		cout << "x_trans = " << x_trans << endl;
+		double overlap_area = (frame2.cols - x_trans) * frame2.rows;
 		
 		/* K Means Clustering */
-		// Mat labels, centers;
-		// int K=2, attempts=10, flags=KMEANS_RANDOM_CENTERS;
-		// TermCriteria tc;
-		// kmeans(obj,K,labels,tc,attempts,flags,centers);
-		// Mat centers_points = centers.reshape(2,centers.rows);
+		Mat labels, centers;
+		int K=2, attempts=10, flags=KMEANS_RANDOM_CENTERS;
+		TermCriteria tc;
+		kmeans(obj,K,labels,tc,attempts,flags,centers);
+		Mat centers_points = centers.reshape(2,centers.rows);
 
-		// Scalar colorTab[] =
-    	// {
-        // Scalar(0, 0, 255),
-        // Scalar(0,255,0),
-        // Scalar(255,100,100),
-        // Scalar(255,0,255),
-        // Scalar(0,255,255)
-    	// };
-
-		// Mat drawing;
-		// drawing = frame1.clone();
-		// vector<Point2f> contour0, contour1;	
-		
-		// cout << "Centers Points :\n" << centers_points << endl;
-
-		// // for drawing cluster center points
-		// for(int i=0; i < centers_points.rows; i++)
-		// 	circle(drawing,centers_points.at<Point2f>(i),1,colorTab[3],5,8,0);
-		
-		// // cout << "labels :" << endl << labels << endl;
-
-		// // for drawing good matching points
-		// for( int i = 0; i < obj.size(); i++ )
-        // {
-        //     int clusterIdx = labels.at<int>(i);
-        //     // circle( drawing, obj[i], 2, colorTab[clusterIdx], FILLED, LINE_AA );
-		// 	circle(drawing,obj[i],1,colorTab[clusterIdx],5,8,0);
-
-		// 	if(clusterIdx) contour1.push_back(obj[i]);
-		// 	else contour0.push_back(obj[i]);
-        // }
-
-		// // for calculating area of clusters
-		// double area0 = contourArea(contour0);
-		// double area1 = contourArea(contour1);
-		// vector<Point> approx0, approx1;
-		// approxPolyDP(contour0, approx0, 5, true);
-		// approxPolyDP(contour1, approx1, 5, true);
-		// double area01 = contourArea(approx0);
-		// double area11 = contourArea(approx1);
-		// cout << "area0 =" << area0 << endl << "area01 =" << area01 << endl << "approx poly vertices" << approx0.size() << endl;
-		// cout << "area1 =" << area1 << endl << "area11 =" << area11 << endl << "approx poly vertices" << approx1.size() << endl;
-
-		// imshow("cluster points",drawing); waitKey(0);
-		// return drawing;
-
-		/* Hierachical Clustering */
-		cvflann::KMeansIndexParams kmean_params(32,100,cvflann::FLANN_CENTERS_KMEANSPP);
-		// cvflann::KMeansIndexParams kmean_params(32,100,cvflann::FLANN_CENTERS_RANDOM);
-		Mat1f samples(obj.size(),2);
-
-		for(int i=0;i<obj.size();i++){
-			samples(i,0) = obj[i].x;
-			samples(i,1) = obj[i].y;
-		}
-		Mat1f centers(obj.size(),2);
-		// int true_number_clusters = flann::hierarchicalClustering<cv::L2<float> >(samples,centers,kmean_params);
-		int true_number_clusters = flann::hierarchicalClustering<cvflann::L2<float>>(samples,centers,kmean_params);
-		// int true_number_clusters = flann::hierarchicalClustering(samples,centers,kmean_params,100);
-		centers = centers.rowRange(cv::Range(0,true_number_clusters));
+		Scalar colorTab[] =
+    	{
+        Scalar(0, 0, 255),
+        Scalar(0,255,0),
+        Scalar(255,100,100),
+        Scalar(255,0,255),
+        Scalar(0,255,255)
+    	};
 
 		Mat drawing;
 		drawing = frame1.clone();
-		// for drawing points matching points
-		for(int i=0; i < obj.size(); i++)
-			circle(drawing,obj[i],1,Scalar(0,255,0),5,8,0);		
+		vector<Point2f> contour0, contour1;	
 		
-		cout << "Centers Points :\n" << centers << endl;
-		// for drawing cluster points
-		for(int i=0; i < centers.rows; i++)
-			circle(drawing,centers.at<Point2f>(i),3,Scalar(0,0,255),5,8,0);
+		cout << "Centers Points :\n" << centers_points << endl;
+
+		// for drawing cluster center points
+		for(int i=0; i < centers_points.rows; i++)
+			circle(drawing,centers_points.at<Point2f>(i),1,colorTab[2],5,8,0);
+		
+		// cout << "labels :" << endl << labels << endl;
+
+		// for drawing good matching points
+		for( int i = 0; i < obj.size(); i++ )
+        {
+            int clusterIdx = labels.at<int>(i);
+            // circle( drawing, obj[i], 2, colorTab[clusterIdx], FILLED, LINE_AA );
+			circle(drawing,obj[i],1,colorTab[clusterIdx],5,8,0);
+
+			if(clusterIdx) contour1.push_back(obj[i]);
+			else contour0.push_back(obj[i]);
+        }
+
+		// for calculating area of clusters
+		double area0 = contourArea(contour0);
+		double area1 = contourArea(contour1);
+		vector<vector<Point> > contours;
+		vector<Point> approx0, approx1;
+		approxPolyDP(contour0, approx0, 5, true);
+		approxPolyDP(contour1, approx1, 5, true);
+		double approx0_area = contourArea(approx0);
+		double approx1_area = contourArea(approx1);
+
+		contours.push_back(approx0);
+		contours.push_back(approx1);
+
+		cout << "area0 = " << area0 << endl << "approx0_area =" << approx0_area << endl; //<< "approx poly vertices" << approx0.size() << endl;
+		cout << "area1 = " << area1 << endl << "approx1_area =" << approx1_area << endl; //<< "approx poly vertices" << approx1.size() << endl;
+		cout << "overlapped area = " << overlap_area << endl;
+		cout << "percentage area (approx) = " << ( (approx0_area + approx1_area) / overlap_area ) * 100 << " %" << endl;
+
+		drawContours(drawing,contours,0,colorTab[3],2);
+		drawContours(drawing,contours,1,colorTab[3],2);
+		// imshow("Area covered by approx",drawing); waitKey(0);
+
+		vector<vector<Point> > hull(contours.size());
+		for(size_t i=0; i<contours.size(); i++)
+			convexHull(contours[i],hull[i]);
+
+		drawContours(drawing,hull,0,colorTab[4],2);
+		drawContours(drawing,hull,1,colorTab[4],2);
+
+		double hull0_area = contourArea(hull[0]);
+		double hull1_area = contourArea(hull[1]);
+		cout << "hull0_area =" << hull0_area << endl;
+		cout << "hull1_area =" << hull1_area << endl;
+		cout << "percentage area (hull) = " << ( (hull0_area + hull1_area) / overlap_area ) * 100 << " %" << endl;
+
+		// imshow("Actual area covered vs approx",drawing); waitKey(0);
+		// return 1;
+		// return drawing;
+		if( (hull0_area + hull1_area) / overlap_area > 0.5 && contour0.size() > 40 && contour1.size() > 40 ) return 1;
+		else return 0;
+
+		/* Hierachical Clustering */
+		// cvflann::KMeansIndexParams kmean_params(32,100,cvflann::FLANN_CENTERS_KMEANSPP);
+		// // cvflann::KMeansIndexParams kmean_params(32,100,cvflann::FLANN_CENTERS_RANDOM);
+		// Mat1f samples(obj.size(),2);
+
+		// for(int i=0;i<obj.size();i++){
+		// 	samples(i,0) = obj[i].x;
+		// 	samples(i,1) = obj[i].y;
+		// }
+		// Mat1f centers(obj.size(),2);
+		// // int true_number_clusters = flann::hierarchicalClustering<cv::L2<float> >(samples,centers,kmean_params);
+		// int true_number_clusters = flann::hierarchicalClustering<cvflann::L2<float>>(samples,centers,kmean_params);
+		// // int true_number_clusters = flann::hierarchicalClustering(samples,centers,kmean_params,100);
+		// centers = centers.rowRange(cv::Range(0,true_number_clusters));
+
+		// Mat drawing;
+		// drawing = frame1.clone();
+		// // for drawing points matching points
+		// for(int i=0; i < obj.size(); i++)
+		// 	circle(drawing,obj[i],1,Scalar(0,255,0),5,8,0);		
+		
+		// cout << "Centers Points :\n" << centers << endl;
+		// // for drawing cluster points
+		// for(int i=0; i < centers.rows; i++)
+		// 	circle(drawing,centers.at<Point2f>(i),3,Scalar(0,0,255),5,8,0);
 		
 		
-		cout << "Number of Cluster Points :\t" << centers.rows << endl;
-		cout << "Number of Matched Feature Points :\t" << obj.size() << endl;
-		// imshow("cluster points",drawing); waitKey(0);
+		// cout << "Number of Cluster Points :\t" << centers.rows << endl;
+		// cout << "Number of Matched Feature Points :\t" << obj.size() << endl;
+		// // imshow("cluster points",drawing); waitKey(0);
 
-		if (centers.rows < Min_Num_Clusters || obj.size() < Min_Num_MatchedFeaturePoints)
-			return 0;
+		// if (centers.rows < Min_Num_Clusters || obj.size() < Min_Num_MatchedFeaturePoints)
+		// 	return 0;
 
-		/* Calculating Average Distance Between Each Cluster Points */
-		float dist_btw_clusters = 0;
-		for(int i=0; i<centers.rows; i++){
-			float distance = 0;
-			for(int j = i; j<centers.rows; j++)
-				distance += norm(centers.at<Point2f>(j) - centers.at<Point2f>(j+1));
-			float avg_dist = distance / (centers.rows - i);
-			dist_btw_clusters += avg_dist;
-		}
-		float avg_dist_btw_clusters = dist_btw_clusters / centers.rows;
-		cout << "Average Dist. Btw Clusters :\t" << avg_dist_btw_clusters << endl;
+		// /* Calculating Average Distance Between Each Cluster Points */
+		// float dist_btw_clusters = 0;
+		// for(int i=0; i<centers.rows; i++){
+		// 	float distance = 0;
+		// 	for(int j = i; j<centers.rows; j++)
+		// 		distance += norm(centers.at<Point2f>(j) - centers.at<Point2f>(j+1));
+		// 	float avg_dist = distance / (centers.rows - i);
+		// 	dist_btw_clusters += avg_dist;
+		// }
+		// float avg_dist_btw_clusters = dist_btw_clusters / centers.rows;
+		// cout << "Average Dist. Btw Clusters :\t" << avg_dist_btw_clusters << endl;
 
-		if (avg_dist_btw_clusters < Avg_Dist_Btw_Clusters)
-			return 0;
+		// if (avg_dist_btw_clusters < Avg_Dist_Btw_Clusters)
+		// 	return 0;
 
-		return 1;
+		// return 1;
 
+		/* ORB Feature Detector */
+		// vector<KeyPoint> ORB_keypoints_1, ORB_keypoints_2;
+		// Mat ORB_descriptors_1, ORB_descriptors_2;
+		// vector<vector<DMatch> > ORB_matches;
+		// // vector<DMatch> ORB_matches;
+		// vector<DMatch> ORB_good_matches;
+		// Ptr<ORB> ORB_detector = ORB::create();
+		// Ptr<DescriptorMatcher> ORB_matcher  = DescriptorMatcher::create ( "BruteForce-Hamming" );
+		// // cout << "Creating ORB" << endl;
+		// // Ptr<DescriptorMatcher> ORB_matcher = DescriptorMatcher::create(DescriptorMatcher::FLANNBASED);
+		// ORB_detector -> detectAndCompute(frame1_gray, noArray(), ORB_keypoints_1, ORB_descriptors_1);
+		// ORB_detector -> detectAndCompute(frame2_gray, noArray(), ORB_keypoints_2, ORB_descriptors_2);
+		// // cout << "Detect and compute..." << endl;
+		// // ORB_matcher -> match ( ORB_descriptors_1, ORB_descriptors_2, ORB_matches );
+		// ORB_matcher->knnMatch(ORB_descriptors_1, ORB_descriptors_2, ORB_matches, 2);
+		// // cout<< "matching..." << endl;
+		// // only get good matching points using Lowe's ratio test
+		// for (int i = 0; i < ORB_matches.size(); ++i)
+		// {
+		// 	if (ORB_matches[i][0].distance < ratio * ORB_matches[i][1].distance)
+		// 		ORB_good_matches.push_back(ORB_matches[i][0]);
+		// 	// if (ORB_matches[i].distance < ratio * ORB_matches[i].distance)
+		// 	// 	ORB_good_matches.push_back(ORB_matches[i]);
+		// }
+		// drawMatches(frame1, ORB_keypoints_1, frame2, ORB_keypoints_2, ORB_good_matches, result, Scalar(0, 0, 255), Scalar(0, 0, 255));
+		// imshow("ORB matches",result); waitKey(0);
+		// // cout << "found good matches..." << endl;
+		// vector<Point2f> ORB_obj, ORB_scene;
+		// for (size_t i = 0; i < ORB_good_matches.size(); i++){
+		// 	ORB_obj.push_back(ORB_keypoints_1[ORB_good_matches[i].queryIdx].pt);
+		// 	ORB_scene.push_back(ORB_keypoints_2[ORB_good_matches[i].trainIdx].pt);
+		// }
+		// cout << "pushing back into obj and scene..." << endl;
+		// Mat drawing_orb = frame1.clone();
+		// for(size_t i=0; i<obj.size(); i++)
+		// 	circle(drawing_orb,obj[i],1,colorTab[0],5,8,0);
+		// for(size_t i=0; i<ORB_obj.size();i++)
+		// 	circle(drawing_orb,ORB_obj[i],1,colorTab[1],5,8,0);
+		// cout << "drawing points..." << endl;
+		// imshow("SIFT vs ORB",drawing_orb); waitKey(0);
+
+		/* AKAZE Feature Detector */
+		// vector<KeyPoint> AKAZE_keypoints_1, AKAZE_keypoints_2;
+		// Mat AKAZE_descriptors_1, AKAZE_descriptors_2;
+		// vector<vector<DMatch> > AKAZE_matches;
+		// // vector<DMatch> ORB_matches;
+		// vector<DMatch> AKAZE_good_matches;
+		// Ptr<AKAZE> AKAZE_detector = AKAZE::create();
+		// // Ptr<DescriptorMatcher> AKAZE_matcher  = DescriptorMatcher::create ( "" );
+		// BFMatcher AKAZE_matcher(NORM_HAMMING);
+		// // cout << "Creating ORB" << endl;
+		// // Ptr<DescriptorMatcher> ORB_matcher = DescriptorMatcher::create(DescriptorMatcher::FLANNBASED);
+		// AKAZE_detector -> detectAndCompute(frame1_gray, noArray(), AKAZE_keypoints_1, AKAZE_descriptors_1);
+		// AKAZE_detector -> detectAndCompute(frame2_gray, noArray(), AKAZE_keypoints_2, AKAZE_descriptors_2);
+		// // cout << "Detect and compute..." << endl;
+		// // ORB_matcher -> match ( ORB_descriptors_1, ORB_descriptors_2, ORB_matches );
+		// AKAZE_matcher.knnMatch(AKAZE_descriptors_1, AKAZE_descriptors_2, AKAZE_matches, 2);
+		// // cout<< "matching..." << endl;
+		// // only get good matching points using Lowe's ratio test
+		// for (int i = 0; i < AKAZE_matches.size(); ++i)
+		// {
+		// 	if (AKAZE_matches[i][0].distance < ratio * AKAZE_matches[i][1].distance)
+		// 		AKAZE_good_matches.push_back(AKAZE_matches[i][0]);
+		// 	// if (ORB_matches[i].distance < ratio * ORB_matches[i].distance)
+		// 	// 	ORB_good_matches.push_back(ORB_matches[i]);
+		// }
+		// drawMatches(frame1, AKAZE_keypoints_1, frame2, AKAZE_keypoints_2, AKAZE_good_matches, result, Scalar(0, 0, 255), Scalar(0, 0, 255));
+		// imshow("AKAZE matches",result); waitKey(0);
+		// // cout << "found good matches..." << endl;
+		// vector<Point2f> AKAZE_obj, AKAZE_scene;
+		// for (size_t i = 0; i < AKAZE_good_matches.size(); i++){
+		// 	AKAZE_obj.push_back(AKAZE_keypoints_1[AKAZE_good_matches[i].queryIdx].pt);
+		// 	AKAZE_scene.push_back(AKAZE_keypoints_2[AKAZE_good_matches[i].trainIdx].pt);
+		// }
+		// // cout << "pushing back into obj and scene..." << endl;
+		// // Mat drawing_akaze = frame1.clone();
+		// // for(size_t i=0; i<obj.size(); i++)
+		// // 	circle(drawing_akaze,obj[i],1,colorTab[0],5,8,0);
+		// // for(size_t i=0; i<AKAZE_obj.size();i++)
+		// // 	circle(drawing_akaze,AKAZE_obj[i],1,colorTab[1],5,8,0);
+		// // cout << "drawing points..." << endl;
+		// // imshow("SIFT vs AKAZE",drawing_akaze); waitKey(0);
+
+		// Mat drawing_comparison = frame1.clone();
+		// for(size_t i=0; i<obj.size(); i++)
+		// 	circle(drawing_comparison,obj[i],1,colorTab[0],5,8,0);
+		// for(size_t i=0; i<AKAZE_obj.size();i++)
+		// 	circle(drawing_comparison,AKAZE_obj[i],1,colorTab[1],5,8,0);
+		// for(size_t i=0; i<ORB_obj.size();i++)
+		// 	circle(drawing_comparison,ORB_obj[i],1,colorTab[2],5,8,0);
+		// imshow("SIFT vs AKAZE vs ORB",drawing_comparison); waitKey(0);
+
+		return 1;		
 	}
 
 	// initalizers

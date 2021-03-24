@@ -1,0 +1,30 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "cppbuild",
+			"label": "C/C++: g++ build active file",
+			"command": "/usr/bin/g++",
+			"args": [
+				"-g", "-stdlib=libc++", "-std=c++11", "--verbose",
+				"${file}", "Stitcher.cpp", "data_cleaning.cpp",
+				"-I../include",
+				"-I/usr/local/include/opencv4",
+				"-I/opt/homebrew/Cellar/eigen/3.3.9/include/eigen3", //"-I/Users/daweikee/projects/opencv_project/A005_Stitching_Program/include",
+				"-L/usr/local/lib", //"-dynamiclib",//"-Wl", "-rpath=/opt/lib",
+				"-lopencv_imgcodecs", "-lopencv_features2d", "-lopencv_calib3d", "-lopencv_highgui", "-lopencv_imgproc", "-lopencv_stitching", 
+				"-lopencv_core", "-lopencv_videoio", "-lopencv_video","-lopencv_flann","-lopencv_photo",
+				"-o",
+				"${fileDirname}/${fileBasenameNoExtension}"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build",
+			"detail": "compiler: /usr/bin/g++"
+		}
+	]
+}
