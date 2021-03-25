@@ -21,6 +21,7 @@ namespace A005 {
 		Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create(DescriptorMatcher::FLANNBASED);	// Initialise FLANN Matcher
 		vector<vector<DMatch>> matches;																// Store matches
 		vector<DMatch> good_matches;																// Store good matches
+		Mat H;																						// Store Homography matrix
 
 		// convert to grayscale for keypoints detection
 		cvtColor(frame1, frame1_gray, CV_BGR2GRAY);
@@ -56,9 +57,61 @@ namespace A005 {
 			scene.push_back(keypoints2[good_matches[i].trainIdx].pt);
 		}
 
+		/* AKAZE Feature Detector */
+		if(use_AKAZE){
+			vector<KeyPoint> AKAZE_keypoints_1, AKAZE_keypoints_2;
+			Mat AKAZE_descriptors_1, AKAZE_descriptors_2;
+			vector<vector<DMatch> > AKAZE_matches;
+			// vector<DMatch> ORB_matches;
+			vector<DMatch> AKAZE_good_matches;
+			Ptr<AKAZE> AKAZE_detector = AKAZE::create();
+			// Ptr<DescriptorMatcher> AKAZE_matcher  = DescriptorMatcher::create ( "" );
+			BFMatcher AKAZE_matcher(NORM_HAMMING);
+			// cout << "Creating ORB" << endl;
+			// Ptr<DescriptorMatcher> ORB_matcher = DescriptorMatcher::create(DescriptorMatcher::FLANNBASED);
+			AKAZE_detector -> detectAndCompute(frame1_gray, noArray(), AKAZE_keypoints_1, AKAZE_descriptors_1);
+			AKAZE_detector -> detectAndCompute(frame2_gray, noArray(), AKAZE_keypoints_2, AKAZE_descriptors_2);
+			// cout << "Detect and compute..." << endl;
+			// ORB_matcher -> match ( ORB_descriptors_1, ORB_descriptors_2, ORB_matches );
+			AKAZE_matcher.knnMatch(AKAZE_descriptors_1, AKAZE_descriptors_2, AKAZE_matches, 2);
+			// cout<< "matching..." << endl;
+			// only get good matching points using Lowe's ratio test
+			for (int i = 0; i < AKAZE_matches.size(); ++i)
+			{
+				if (AKAZE_matches[i][0].distance < ratio * AKAZE_matches[i][1].distance)
+					AKAZE_good_matches.push_back(AKAZE_matches[i][0]);
+				// if (ORB_matches[i].distance < ratio * ORB_matches[i].distance)
+				// 	ORB_good_matches.push_back(ORB_matches[i]);
+			}
+			// drawMatches(frame1, AKAZE_keypoints_1, frame2, AKAZE_keypoints_2, AKAZE_good_matches, result, Scalar(0, 0, 255), Scalar(0, 0, 255)); imshow("AKAZE matches",result); waitKey(0);
+			// cout << "found good matches..." << endl;
+			vector<Point2f> AKAZE_obj, AKAZE_scene;
+			for (size_t i = 0; i < AKAZE_good_matches.size(); i++){
+				obj.push_back(AKAZE_keypoints_1[AKAZE_good_matches[i].queryIdx].pt);
+				scene.push_back(AKAZE_keypoints_2[AKAZE_good_matches[i].trainIdx].pt);
+			}
 
-		// find homography
-		Mat H = findHomography(obj,scene,RANSAC);
+			/* Checking for duplicate points */
+			vector <Point2f> obj_unique, scene_unique;
+			for (size_t i=0; i<scene.size(); i++){
+				for (size_t j=i+1; j <= scene.size(); j++){
+					if( scene[i] == scene[j]) break;
+					else if( j== scene.size() ){
+						scene_unique.push_back(scene[i]);
+						obj_unique.push_back(obj[i]);
+					}
+				}
+			}
+
+			// find homography
+			H = findHomography(obj_unique,scene_unique,RANSAC);
+		}
+
+		else{
+			// find homography
+			H = findHomography(obj,scene,RANSAC);
+		}
+
 		cout << "Homography H : \n" << H << endl;
 		// Warp frame1 to same location as frame2
 		Mat right;
@@ -393,7 +446,7 @@ namespace A005 {
 			}
 		}
 		// Draw lines of good matches
-		drawMatches(frame1, keypoints1, frame2, keypoints2, good_matches, result, Scalar(0, 0, 255), Scalar(0, 0, 255)); imshow("SIFT Matches",result); waitKey(0);
+		// drawMatches(frame1, keypoints1, frame2, keypoints2, good_matches, result, Scalar(0, 0, 255), Scalar(0, 0, 255)); imshow("SIFT Matches",result); waitKey(0);
 		// -- Get the keypoints from the good matches
 		for (size_t i = 0; i < good_matches.size(); i++){
 			obj.push_back(keypoints1[good_matches[i].queryIdx].pt);
@@ -426,7 +479,7 @@ namespace A005 {
 				// if (ORB_matches[i].distance < ratio * ORB_matches[i].distance)
 				// 	ORB_good_matches.push_back(ORB_matches[i]);
 			}
-			drawMatches(frame1, AKAZE_keypoints_1, frame2, AKAZE_keypoints_2, AKAZE_good_matches, result, Scalar(0, 0, 255), Scalar(0, 0, 255)); imshow("AKAZE matches",result); waitKey(0);
+			// drawMatches(frame1, AKAZE_keypoints_1, frame2, AKAZE_keypoints_2, AKAZE_good_matches, result, Scalar(0, 0, 255), Scalar(0, 0, 255)); imshow("AKAZE matches",result); waitKey(0);
 			// cout << "found good matches..." << endl;
 			vector<Point2f> AKAZE_obj, AKAZE_scene;
 			for (size_t i = 0; i < AKAZE_good_matches.size(); i++){
@@ -460,9 +513,9 @@ namespace A005 {
 				kp_right[i] = cv::KeyPoint(obj_unique[i], 1);
 			
 			Mat matches_drawing;
-			drawMatches(frame2, kp_left, frame1, kp_right, matches, matches_drawing, Scalar(0, 0, 255), Scalar(0, 0, 255)); imshow("All Matches",matches_drawing); waitKey(0);
+			// drawMatches(frame2, kp_left, frame1, kp_right, matches, matches_drawing, Scalar(0, 0, 255), Scalar(0, 0, 255)); imshow("All Matches",matches_drawing); waitKey(0);
 
-
+			if (obj_unique.size() < 4) return 0;
 			/* Findind translation of f1 to find overlap area */
 			Mat H = findHomography(obj_unique,scene_unique,RANSAC);
 			double x_trans = (H.at<double>(0,2) > H.at<double>(2,0)) ? H.at<double>(0,2) : H.at<double>(2,0);
@@ -545,15 +598,16 @@ namespace A005 {
 			cout << "no. of matched points in C1=\t" << contour0.size() << endl;
 			cout << "no. of matched points in C2=\t" << contour1.size() << endl;
 
-			imshow("Actual area covered vs approx",drawing); waitKey(0);
+			// imshow("Actual area covered vs approx",drawing); waitKey(0);
 			// return 1;
 			// return drawing;
-			if( (hull0_area + hull1_area) / overlap_area > 0.5 && contour0.size() > 40 && contour1.size() > 40 ) return 1;
+			if( (hull0_area + hull1_area) / overlap_area > 0.3 && contour0.size() > 25 && contour1.size() > 25 ) return 1;
 			else return 0;
 		}
 
 		else{
 			cout << "Not using AKAZE with SIFT... No of points:\t" << obj.size() << endl;
+			if(obj.size() < 4) return 0;
 			/* Findind translation of f1 to find overlap area */
 			Mat H = findHomography(obj,scene,RANSAC);
 			double x_trans = (H.at<double>(0,2) > H.at<double>(2,0)) ? H.at<double>(0,2) : H.at<double>(2,0);
@@ -636,10 +690,10 @@ namespace A005 {
 			cout << "no. of matched points in C1=\t" << contour0.size() << endl;
 			cout << "no. of matched points in C2=\t" << contour1.size() << endl;
 
-			imshow("Actual area covered vs approx",drawing); waitKey(0);
+			// imshow("Actual area covered vs approx",drawing); waitKey(0);
 			// return 1;
 			// return drawing;
-			if( (hull0_area + hull1_area) / overlap_area > 0.5 && contour0.size() > 40 && contour1.size() > 40 ) return 1;
+			if( (hull0_area + hull1_area) / overlap_area > 0.3 && contour0.size() > 25 && contour1.size() > 25 ) return 1;
 			else return 0;
 
 		}

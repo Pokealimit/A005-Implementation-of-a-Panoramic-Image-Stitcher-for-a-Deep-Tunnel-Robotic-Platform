@@ -31,108 +31,117 @@ int main() {
 	stitching_program::change_perc_width_fixed(0.41);
 
 	/* Check if good match before stitching */
-	Mat f1 = imread("../Unwarped_Frames/unwarped frame 7.bmp");
-	Mat f2 = imread("../Unwarped_Frames/unwarped frame 0.bmp");
-	rotate(f1, f1, ROTATE_90_COUNTERCLOCKWISE);
-	rotate(f2, f2, ROTATE_90_COUNTERCLOCKWISE);	
-	int fit = stitching_program::Check_Points_Distribution(f1,f2,1);
+	// Mat f1 = imread("../Unwarped_Frames/unwarped frame 7.bmp");
+	// Mat f2 = imread("../Unwarped_Frames/unwarped frame 0.bmp");
+	// rotate(f1, f1, ROTATE_90_COUNTERCLOCKWISE);
+	// rotate(f2, f2, ROTATE_90_COUNTERCLOCKWISE);	
+
+	/* changing contrast */
+	// Mat f1_contrast;
+	// // f1.convertTo(f1_contrast,-1,2,0);
+	// cvtColor(f1,f1,COLOR_BGR2GRAY);
+	// equalizeHist(f1,f1_contrast);
+	// imshow("frame1 original",f1); imshow("frame1 changed contrast",f1_contrast); waitKey(0);
+	
+
+	// int fit = stitching_program::Check_Points_Distribution(f1,f2,0);
 	// string goodfit = (fit==1) ? "good" : "Not good";
 	// cout << "Good fit? :\t" <<  goodfit << endl;
 	
 	/* Stitching with Checking for good match */
-	// vector<cv::String> fn;
-	// // create a list of image file names
-	// glob("/Users/daweikee/projects/opencv_project/Unwarped_Frames/*.bmp", fn, false);
-	// size_t count = fn.size(); //number of bmp files in images folder
-	// for (size_t frame_counts = 0; frame_counts < fn.size(); ){
-	// 	// for the first stitch
-	// 	for(size_t step_size = 15; frame_counts == 0;){
-	// 		ostringstream f1_name, f2_name, result_name;
-	// 		f1_name << "../Unwarped_Frames/unwarped frame " << frame_counts+step_size << ".bmp";
-	// 		f2_name << "../Unwarped_Frames/unwarped frame " << frame_counts << ".bmp";
-	// 		Mat f1 = imread(f1_name.str());
-	// 		Mat f2 = imread(f2_name.str());
-	// 		cout << "Fetching :\t" << f1_name.str() << endl;
-	// 		cout << "Fetching :\t" << f2_name.str() << endl;
-	// 		if (f1.empty() || f2.empty()) exit(-1);
-	// 		rotate(f1, f1, ROTATE_90_COUNTERCLOCKWISE);
-	// 		rotate(f2, f2, ROTATE_90_COUNTERCLOCKWISE);
-	// 		if(stitching_program::Check_Points_Distribution(f1,f2)){
-	// 			Mat result = stitching_program::stitch2frames(f1,f2);
-	// 			result = stitching_program::remove_black_portion(result);
-	// 			if(result.empty()){
-	// 				cout << "Unable to stitch.." << endl;
-	// 				step_size--;
-	// 				continue;
-	// 			}
-	// 			result_name << "./result/stitched " << frame_counts+step_size << ".bmp";
-	// 			imwrite(result_name.str(),result);
-	// 			frame_counts += step_size;
-	// 			break;
-	// 		}
-	// 		else{
-	// 			step_size--;
-	// 			if(step_size == 0) return -1;
-	// 		}
-	// 	}
+	vector<cv::String> fn;
+	// create a list of image file names
+	glob("/Users/daweikee/projects/opencv_project/Unwarped_Frames/*.bmp", fn, false);
+	size_t count = fn.size(); //number of bmp files in images folder
+	for (size_t frame_counts = 0; frame_counts < fn.size(); ){
+		// for the first stitch
+		for(size_t step_size = 15; frame_counts == 0;){
+			ostringstream f1_name, f2_name, result_name;
+			f1_name << "../Unwarped_Frames/unwarped frame " << frame_counts+step_size << ".bmp";
+			f2_name << "../Unwarped_Frames/unwarped frame " << frame_counts << ".bmp";
+			Mat f1 = imread(f1_name.str());
+			Mat f2 = imread(f2_name.str());
+			cout << "Fetching :\t" << f1_name.str() << endl;
+			cout << "Fetching :\t" << f2_name.str() << endl;
+			if (f1.empty() || f2.empty()) exit(-1);
+			rotate(f1, f1, ROTATE_90_COUNTERCLOCKWISE);
+			rotate(f2, f2, ROTATE_90_COUNTERCLOCKWISE);
+			if(stitching_program::Check_Points_Distribution(f1,f2,1)){
+				Mat result = stitching_program::stitch2frames(f1,f2,1);
+				result = stitching_program::remove_black_portion(result);
+				if(result.empty()){
+					cout << "Unable to stitch.." << endl;
+					step_size--;
+					continue;
+				}
+				result_name << "./result/stitched " << frame_counts+step_size << ".bmp";
+				imwrite(result_name.str(),result);
+				frame_counts += step_size;
+				break;
+			}
+			else{
+				step_size--;
+				if(step_size == 0) return -1;
+			}
+		}
 
-	// 	// for subsequent stitch
-	// 	for(size_t step_size = 15; step_size > 0;){
-	// 		ostringstream f1_name, f2_name, result_name;
-	// 		f1_name << "../Unwarped_Frames/unwarped frame " << frame_counts+step_size << ".bmp";
-	// 		f2_name << "./result/stitched " << frame_counts << ".bmp";
-	// 		Mat f1 = imread(f1_name.str());
-	// 		Mat f2 = imread(f2_name.str());
-	// 		cout << "Fetching :\t" << f1_name.str() << endl;
-	// 		cout << "Fetching :\t" << f2_name.str() << endl;
-	// 		if (f2.empty()) exit(-1);
-	// 		if (f1.empty()){
-	// 			step_size--;
-	// 			continue;
-	// 		}
-	// 		rotate(f1, f1, ROTATE_90_COUNTERCLOCKWISE);
-	// 		int cutoff_frame2 = 0;
-	// 		Mat f2_crop;
-	// 		if(f2.cols < (f1.cols + stitching_program::get_width_allowance()))
-	// 			f2_crop = f2.clone();
-	// 		else{
-	// 			cutoff_frame2 = f2.cols - (f1.cols + stitching_program::get_width_allowance());
-	// 			// frame2.copyTo(frame2_crop(Rect(cutoff_frame2,0,frame2.cols,frame2.rows)));
-	// 			Rect bound(0,0,f2.cols,f2.rows);
-	// 			Rect crop_frame2(cutoff_frame2,0,f2.cols,f2.rows);
-	// 			f2_crop = f2(crop_frame2 & bound);
-	// 		}
-	// 		if(stitching_program::Check_Points_Distribution(f1,f2_crop)){
-	// 			Mat result = stitching_program::stitch2frames(f1,f2_crop);
-	// 			if(result.empty()){
-	// 				cout << "Unable to stitch..." << endl;
-	// 				step_size--;
-	// 				continue;
-	// 			}
-	// 			result = stitching_program::remove_black_portion(result);
-	// 			if(cutoff_frame2>0){
-	// 				Rect bound(0,0,f2.cols,f2.rows);
-	// 				Rect crop_frame2_left(0,0,cutoff_frame2,f2.rows);
-	// 				Mat f2_left = f2(crop_frame2_left & bound);
-	// 				cout << "f2_left type:\t" << f2_left.type() << endl;
-	// 				// imshow("f2_crop_left",f2_left);waitKey(0);
-	// 				cout << "f2_crop_left size:\t" << f2_left.size() << endl;
-	// 				Mat combined;
-	// 				hconcat(f2_left,result,combined);
-	// 				// imshow("combined",combined); waitKey(0);
-	// 				result = combined.clone();
-	// 			}
-	// 			result_name << "./result/stitched " << frame_counts+step_size << ".bmp";
-	// 			imwrite(result_name.str(),result);
-	// 			frame_counts += step_size;
-	// 			break;
-	// 		}
-	// 		else{
-	// 			step_size--;
-	// 			if(step_size == 0) return -1;
-	// 		}
-	// 	}
-	// }
+		// for subsequent stitch
+		for(size_t step_size = 15; step_size > 0;){
+			ostringstream f1_name, f2_name, result_name;
+			f1_name << "../Unwarped_Frames/unwarped frame " << frame_counts+step_size << ".bmp";
+			f2_name << "./result/stitched " << frame_counts << ".bmp";
+			Mat f1 = imread(f1_name.str());
+			Mat f2 = imread(f2_name.str());
+			cout << "Fetching :\t" << f1_name.str() << endl;
+			cout << "Fetching :\t" << f2_name.str() << endl;
+			if (f2.empty()) exit(-1);
+			if (f1.empty()){
+				step_size--;
+				continue;
+			}
+			rotate(f1, f1, ROTATE_90_COUNTERCLOCKWISE);
+			int cutoff_frame2 = 0;
+			Mat f2_crop;
+			if(f2.cols < (f1.cols + stitching_program::get_width_allowance()))
+				f2_crop = f2.clone();
+			else{
+				cutoff_frame2 = f2.cols - (f1.cols + stitching_program::get_width_allowance());
+				// frame2.copyTo(frame2_crop(Rect(cutoff_frame2,0,frame2.cols,frame2.rows)));
+				Rect bound(0,0,f2.cols,f2.rows);
+				Rect crop_frame2(cutoff_frame2,0,f2.cols,f2.rows);
+				f2_crop = f2(crop_frame2 & bound);
+			}
+			if(stitching_program::Check_Points_Distribution(f1,f2_crop,1)){
+				Mat result = stitching_program::stitch2frames(f1,f2_crop,1);
+				if(result.empty()){
+					cout << "Unable to stitch..." << endl;
+					step_size--;
+					continue;
+				}
+				result = stitching_program::remove_black_portion(result);
+				if(cutoff_frame2>0){
+					Rect bound(0,0,f2.cols,f2.rows);
+					Rect crop_frame2_left(0,0,cutoff_frame2,f2.rows);
+					Mat f2_left = f2(crop_frame2_left & bound);
+					cout << "f2_left type:\t" << f2_left.type() << endl;
+					// imshow("f2_crop_left",f2_left);waitKey(0);
+					cout << "f2_crop_left size:\t" << f2_left.size() << endl;
+					Mat combined;
+					hconcat(f2_left,result,combined);
+					// imshow("combined",combined); waitKey(0);
+					result = combined.clone();
+				}
+				result_name << "./result/stitched " << frame_counts+step_size << ".bmp";
+				imwrite(result_name.str(),result);
+				frame_counts += step_size;
+				break;
+			}
+			else{
+				step_size--;
+				if(step_size == 0) return -1;
+			}
+		}
+	}
 
 
 
