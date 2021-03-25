@@ -27,6 +27,10 @@ namespace A005 {
 		cvtColor(frame1, frame1_gray, CV_BGR2GRAY);
 		cvtColor(frame2, frame2_gray, CV_BGR2GRAY);
 
+		// equalize histogram
+		equalizeHist(frame1_gray,frame1_gray);
+		equalizeHist(frame2_gray,frame2_gray);
+
 		edge_points.push_back(Point2f(0, 0));
 		edge_points.push_back(Point2f(frame1.cols,0));
 		edge_points.push_back(Point2f(0, frame1.rows));
@@ -435,6 +439,10 @@ namespace A005 {
 		// convert to grayscale for keypoints detection
 		cvtColor(frame1, frame1_gray, CV_BGR2GRAY);
 		cvtColor(frame2, frame2_gray, CV_BGR2GRAY);
+
+		// equalize histogram
+		equalizeHist(frame1_gray,frame1_gray);
+		equalizeHist(frame2_gray,frame2_gray);
 
 		// Compute feature points and descriptors
 		detector->detectAndCompute(frame1_gray, noArray(), keypoints1, des1);

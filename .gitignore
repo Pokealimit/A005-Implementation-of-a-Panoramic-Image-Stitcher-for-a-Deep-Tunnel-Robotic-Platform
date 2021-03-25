@@ -10,3 +10,4 @@ Source
 result/.DS_Store
 Source.dSYM/Contents/Info.plist
 .DS_Store
+.vscode/settings.json

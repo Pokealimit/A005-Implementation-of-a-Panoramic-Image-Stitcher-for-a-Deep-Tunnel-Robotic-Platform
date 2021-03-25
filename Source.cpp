@@ -31,7 +31,7 @@ int main() {
 	stitching_program::change_perc_width_fixed(0.41);
 
 	/* Check if good match before stitching */
-	// Mat f1 = imread("../Unwarped_Frames/unwarped frame 7.bmp");
+	// Mat f1 = imread("../Unwarped_Frames/unwarped frame 11.bmp");
 	// Mat f2 = imread("../Unwarped_Frames/unwarped frame 0.bmp");
 	// rotate(f1, f1, ROTATE_90_COUNTERCLOCKWISE);
 	// rotate(f2, f2, ROTATE_90_COUNTERCLOCKWISE);	
@@ -44,7 +44,7 @@ int main() {
 	// imshow("frame1 original",f1); imshow("frame1 changed contrast",f1_contrast); waitKey(0);
 	
 
-	// int fit = stitching_program::Check_Points_Distribution(f1,f2,0);
+	// int fit = stitching_program::Check_Points_Distribution(f1,f2,1);
 	// string goodfit = (fit==1) ? "good" : "Not good";
 	// cout << "Good fit? :\t" <<  goodfit << endl;
 	
@@ -52,6 +52,8 @@ int main() {
 	vector<cv::String> fn;
 	// create a list of image file names
 	glob("/Users/daweikee/projects/opencv_project/Unwarped_Frames/*.bmp", fn, false);
+	// glob("/Users/daweikee/projects/opencv_project/MSP_MRT_1_img/*.bmp", fn, false);
+
 	size_t count = fn.size(); //number of bmp files in images folder
 	for (size_t frame_counts = 0; frame_counts < (fn.size() - 1); ){
 		// for the first stitch
@@ -59,6 +61,8 @@ int main() {
 			ostringstream f1_name, f2_name, result_name;
 			f1_name << "../Unwarped_Frames/unwarped frame " << frame_counts+step_size << ".bmp";
 			f2_name << "../Unwarped_Frames/unwarped frame " << frame_counts << ".bmp";
+			// f1_name << "/Users/daweikee/projects/opencv_project/MSP_MRT_1_img/img" << frame_counts+step_size << ".bmp";
+			// f2_name << "/Users/daweikee/projects/opencv_project/MSP_MRT_1_img/img" << frame_counts << ".bmp";
 			Mat f1 = imread(f1_name.str());
 			Mat f2 = imread(f2_name.str());
 			cout << "Fetching :\t" << f1_name.str() << endl;
@@ -89,6 +93,7 @@ int main() {
 		for(size_t step_size = 15; step_size > 0;){
 			ostringstream f1_name, f2_name, result_name;
 			f1_name << "../Unwarped_Frames/unwarped frame " << frame_counts+step_size << ".bmp";
+			// f1_name << "/Users/daweikee/projects/opencv_project/MSP_MRT_1_img/img" << frame_counts+step_size << ".bmp";
 			f2_name << "./result/stitched " << frame_counts << ".bmp";
 			Mat f1 = imread(f1_name.str());
 			Mat f2 = imread(f2_name.str());

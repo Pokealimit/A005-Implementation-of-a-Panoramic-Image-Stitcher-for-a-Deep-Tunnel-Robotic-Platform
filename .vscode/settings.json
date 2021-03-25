@@ -3,6 +3,7 @@
         "iostream": "cpp",
         "__bit_reference": "cpp",
         "algorithm": "cpp",
-        "vector": "cpp"
+        "vector": "cpp",
+        "sstream": "cpp"
     }
 }
