@@ -21,20 +21,7 @@ namespace A005 {
 		Ptr<SIFT> detector = SIFT::create();														// Initialise Sift Detector
 		Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create(DescriptorMatcher::FLANNBASED);	// Initialise FLANN Matcher
 		vector<vector<DMatch>> matches;																// Store matches
-		vector<DMatch> good_matches;																// Store good matches																			// to keep track of number of stitching
-
-		// int cutoff_frame2;
-		// Mat frame2_crop;
-		// if(frame2.cols < (frame1.cols + width_allowance))
-		// 	frame2_crop = frame2.clone();
-		// else{
-		// 	cutoff_frame2 = frame2.cols - (frame1.cols + width_allowance);
-		// 	// frame2.copyTo(frame2_crop(Rect(cutoff_frame2,0,frame2.cols,frame2.rows)));
-		// 	Rect crop_frame2(cutoff_frame2,0,frame2.cols,frame2.rows);
-		// 	frame2_crop = frame2(crop_frame2);
-		// }
-		// cout << "frame2_crop x:\t" << frame2_crop.cols << endl;
-		// cout << "frame2_crop y:\t" << frame2_crop.rows << endl;
+		vector<DMatch> good_matches;																// Store good matches
 
 		// convert to grayscale for keypoints detection
 		cvtColor(frame1, frame1_gray, CV_BGR2GRAY);
@@ -48,8 +35,6 @@ namespace A005 {
 		// create a mask for ROI of feature detector - as there is no need to find keypoints of previous part of stitched image
 		Mat mask = Mat::zeros(Size(frame2.cols, frame2.rows), CV_8UC1);
 		rectangle(mask, cvPoint(frame2.cols - frame1.cols, 0), cvPoint(frame2.cols, frame2.rows), 255, -1);
-		//Mat mask = Mat::zeros(Size(frame2.cols, frame2.rows), CV_8UC1);
-		//rectangle(mask, cvPoint(frame2.cols - frame1.cols / 2, 0), cvPoint(frame2.cols, frame2.rows), 255, -1);	// mask out all the pixels of (frame2 - half of frame1)
 		// Compute feature points and descriptors
 		detector->detectAndCompute(frame1_gray, noArray(), keypoints1, des1);
 		detector->detectAndCompute(frame2_gray, noArray(), keypoints2, des2);
@@ -123,7 +108,6 @@ namespace A005 {
 		int cutoff = (edge_points[1].x > edge_points[3].x) ? edge_points[1].x : edge_points[3].x;
 		Rect crop(0,0,cutoff,blend.rows);
 		blend(crop).convertTo(blend_crop,CV_8U,255);	// convert 32bit floating point back to uint8 for display
-
 
 		// Creating Points for Blended frame
 		vector <Point2f> blend_frame_pts;
@@ -363,34 +347,6 @@ namespace A005 {
 	}
 
 	Mat stitching_program::remove_black_portion(Mat frame_uncut){
-		//removing black part
-		// Mat K, J, I = frame_uncut.clone();
-		// cvtColor(I, K, CV_BGR2GRAY);
-		// threshold(K, J, 0, 255, THRESH_BINARY);
-		// vector<vector<Point>> contours;
-		// vector< Vec4i > hierarchy;
-		// findContours(J, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_NONE); // Gives the outer contours
-		// Mat tmp = Mat::zeros(I.size(), CV_8U);
-		// int k = 0;
-		// double max = -1;
-		// for (size_t i = 0; i < contours.size(); i++) // Of course in this case, There is only one external contour but I write the loop for more clarification
-		// {
-		// 	double area = contourArea(contours[i]);
-		// 	if (area > max)
-		// 	{
-		// 		k = i;
-		// 		max = area;
-		// 	}
-		// }
-		// drawContours(tmp, contours, k, Scalar(255, 255, 255), -1); // You can comment this line.I wrote it just for showing the procedure
-		// Rect r = boundingRect(contours[k]);
-		// Mat output;
-		// I(r).copyTo(output);
-		// //	imshow("0", I);
-		// //	imshow("1", J);
-		// //	imshow("2", tmp);
-		// //	imshow("3", output);
-		// return output;
 
 		// using cv::reduce to crop out black area
 		Mat out;
@@ -416,7 +372,7 @@ namespace A005 {
 		Ptr<SIFT> detector = SIFT::create();														// Initialise Sift Detector
 		Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create(DescriptorMatcher::FLANNBASED);	// Initialise FLANN Matcher
 		vector<vector<DMatch>> matches;																// Store matches
-		vector<DMatch> good_matches;																// Store good matches																			// to keep track of number of stitching
+		vector<DMatch> good_matches;																// Store good matches
 
 		// convert to grayscale for keypoints detection
 		cvtColor(frame1, frame1_gray, CV_BGR2GRAY);
