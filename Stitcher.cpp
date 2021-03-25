@@ -790,7 +790,7 @@ namespace A005 {
 	}
 
 	// initalizers
-	float stitching_program::ratio {0.7};						// As in Lowe's paper, can be tuned (default 0.8)
+	float stitching_program::ratio {0.6};						// As in Lowe's paper, can be tuned (default 0.8)
 	int stitching_program::left_row{20};						// pts on left edge, nuumbers of rows of pts
 	int stitching_program::left_col{2};							// pts on left edge, numbers of cols of pts
 	int stitching_program::middle_row{10};						// pts on middle, number of rows of pts
