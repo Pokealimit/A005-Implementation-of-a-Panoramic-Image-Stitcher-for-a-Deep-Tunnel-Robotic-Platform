@@ -53,7 +53,7 @@ int main() {
 	// create a list of image file names
 	glob("/Users/daweikee/projects/opencv_project/Unwarped_Frames/*.bmp", fn, false);
 	size_t count = fn.size(); //number of bmp files in images folder
-	for (size_t frame_counts = 0; frame_counts < fn.size(); ){
+	for (size_t frame_counts = 0; frame_counts < (fn.size() - 1); ){
 		// for the first stitch
 		for(size_t step_size = 15; frame_counts == 0;){
 			ostringstream f1_name, f2_name, result_name;

@@ -104,12 +104,14 @@ namespace A005 {
 			}
 
 			// find homography
-			H = findHomography(obj_unique,scene_unique,RANSAC);
+			// H = findHomography(obj_unique,scene_unique,RANSAC);
+			H = findHomography(obj_unique,scene_unique,LMEDS);
 		}
 
 		else{
 			// find homography
-			H = findHomography(obj,scene,RANSAC);
+			// H = findHomography(obj,scene,RANSAC);
+			H = findHomography(obj,scene,LMEDS);
 		}
 
 		cout << "Homography H : \n" << H << endl;
@@ -160,7 +162,7 @@ namespace A005 {
 		Mat blend_crop;
 		perspectiveTransform(edge_points,edge_points,H);
 		int cutoff = (edge_points[1].x > edge_points[3].x) ? edge_points[1].x : edge_points[3].x;
-		cout << "cutoff:\t" << cutoff << "\tblend.cols:\t" << blend.cols << endl;
+		// cout << "cutoff:\t" << cutoff << "\tblend.cols:\t" << blend.cols << endl;
 		if(cutoff>blend.cols) cutoff = blend.cols - 1;
 		Rect crop(0,0,cutoff,blend.rows);
 		blend(crop).convertTo(blend_crop,CV_8U,255);	// convert 32bit floating point back to uint8 for display
@@ -519,7 +521,8 @@ namespace A005 {
 
 			if (obj_unique.size() < 4) return 0;
 			/* Findind translation of f1 to find overlap area */
-			Mat H = findHomography(obj_unique,scene_unique,RANSAC);
+			// Mat H = findHomography(obj_unique,scene_unique,RANSAC);
+			Mat H = findHomography(obj_unique,scene_unique,LMEDS);
 			double x_trans = (H.at<double>(0,2) > H.at<double>(2,0)) ? H.at<double>(0,2) : H.at<double>(2,0);
 			cout << "x_trans = " << x_trans << endl;
 			double overlap_area = (frame2.cols - x_trans) * frame2.rows;
@@ -603,7 +606,7 @@ namespace A005 {
 			// imshow("Actual area covered vs approx",drawing); waitKey(0);
 			// return 1;
 			// return drawing;
-			if( (hull0_area + hull1_area) / overlap_area > 0.45 && contour0.size() > 15 && contour1.size() > 15 ) return 1;
+			if( (hull0_area + hull1_area) / overlap_area > 0.5 && contour0.size() > 50 && contour1.size() > 50 ) return 1;
 			else return 0;
 		}
 
@@ -611,7 +614,8 @@ namespace A005 {
 			cout << "Not using AKAZE with SIFT... No of points:\t" << obj.size() << endl;
 			if(obj.size() < 4) return 0;
 			/* Findind translation of f1 to find overlap area */
-			Mat H = findHomography(obj,scene,RANSAC);
+			// Mat H = findHomography(obj,scene,RANSAC);
+			Mat H = findHomography(obj,scene,LMEDS);
 			double x_trans = (H.at<double>(0,2) > H.at<double>(2,0)) ? H.at<double>(0,2) : H.at<double>(2,0);
 			cout << "x_trans = " << x_trans << endl;
 			double overlap_area = (frame2.cols - x_trans) * frame2.rows;
@@ -695,7 +699,7 @@ namespace A005 {
 			// imshow("Actual area covered vs approx",drawing); waitKey(0);
 			// return 1;
 			// return drawing;
-			if( (hull0_area + hull1_area) / overlap_area > 0.45 && contour0.size() > 15 && contour1.size() > 15 ) return 1;
+			if( (hull0_area + hull1_area) / overlap_area > 0.5 && contour0.size() > 50 && contour1.size() > 50 ) return 1;
 			else return 0;
 
 		}
@@ -846,7 +850,7 @@ namespace A005 {
 	}
 
 	// initalizers
-	float stitching_program::ratio {0.6};						// As in Lowe's paper, can be tuned (default 0.8)
+	float stitching_program::ratio {0.7};						// As in Lowe's paper, can be tuned (default 0.8)
 	int stitching_program::left_row{20};						// pts on left edge, nuumbers of rows of pts
 	int stitching_program::left_col{2};							// pts on left edge, numbers of cols of pts
 	int stitching_program::middle_row{10};						// pts on middle, number of rows of pts
