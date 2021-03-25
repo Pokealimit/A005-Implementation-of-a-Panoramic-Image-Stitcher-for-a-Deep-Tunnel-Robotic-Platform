@@ -160,6 +160,8 @@ namespace A005 {
 		Mat blend_crop;
 		perspectiveTransform(edge_points,edge_points,H);
 		int cutoff = (edge_points[1].x > edge_points[3].x) ? edge_points[1].x : edge_points[3].x;
+		cout << "cutoff:\t" << cutoff << "\tblend.cols:\t" << blend.cols << endl;
+		if(cutoff>blend.cols) cutoff = blend.cols - 1;
 		Rect crop(0,0,cutoff,blend.rows);
 		blend(crop).convertTo(blend_crop,CV_8U,255);	// convert 32bit floating point back to uint8 for display
 
@@ -601,7 +603,7 @@ namespace A005 {
 			// imshow("Actual area covered vs approx",drawing); waitKey(0);
 			// return 1;
 			// return drawing;
-			if( (hull0_area + hull1_area) / overlap_area > 0.3 && contour0.size() > 25 && contour1.size() > 25 ) return 1;
+			if( (hull0_area + hull1_area) / overlap_area > 0.45 && contour0.size() > 15 && contour1.size() > 15 ) return 1;
 			else return 0;
 		}
 
@@ -693,7 +695,7 @@ namespace A005 {
 			// imshow("Actual area covered vs approx",drawing); waitKey(0);
 			// return 1;
 			// return drawing;
-			if( (hull0_area + hull1_area) / overlap_area > 0.3 && contour0.size() > 25 && contour1.size() > 25 ) return 1;
+			if( (hull0_area + hull1_area) / overlap_area > 0.45 && contour0.size() > 15 && contour1.size() > 15 ) return 1;
 			else return 0;
 
 		}
