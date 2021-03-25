@@ -31,7 +31,7 @@ int main() {
 	stitching_program::change_perc_width_fixed(0.41);
 
 	/* Check if good match before stitching */
-	Mat f1 = imread("../Unwarped_Frames/unwarped frame 11.bmp");
+	Mat f1 = imread("../Unwarped_Frames/unwarped frame 8.bmp");
 	Mat f2 = imread("../Unwarped_Frames/unwarped frame 0.bmp");
 	rotate(f1, f1, ROTATE_90_COUNTERCLOCKWISE);
 	rotate(f2, f2, ROTATE_90_COUNTERCLOCKWISE);	

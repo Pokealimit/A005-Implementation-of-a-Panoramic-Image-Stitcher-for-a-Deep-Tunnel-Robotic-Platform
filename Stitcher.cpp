@@ -393,7 +393,7 @@ namespace A005 {
 			}
 		}
 		// Draw lines of good matches
-		drawMatches(frame1, keypoints1, frame2, keypoints2, good_matches, result, Scalar(0, 0, 255), Scalar(0, 0, 255));
+		drawMatches(frame1, keypoints1, frame2, keypoints2, good_matches, result, Scalar(0, 0, 255), Scalar(0, 0, 255)); imshow("SIFT Matches",result); waitKey(0);
 		// -- Get the keypoints from the good matches
 		for (size_t i = 0; i < good_matches.size(); i++){
 			obj.push_back(keypoints1[good_matches[i].queryIdx].pt);
@@ -426,8 +426,7 @@ namespace A005 {
 				// if (ORB_matches[i].distance < ratio * ORB_matches[i].distance)
 				// 	ORB_good_matches.push_back(ORB_matches[i]);
 			}
-			// drawMatches(frame1, AKAZE_keypoints_1, frame2, AKAZE_keypoints_2, AKAZE_good_matches, result, Scalar(0, 0, 255), Scalar(0, 0, 255));
-			// imshow("AKAZE matches",result); waitKey(0);
+			drawMatches(frame1, AKAZE_keypoints_1, frame2, AKAZE_keypoints_2, AKAZE_good_matches, result, Scalar(0, 0, 255), Scalar(0, 0, 255)); imshow("AKAZE matches",result); waitKey(0);
 			// cout << "found good matches..." << endl;
 			vector<Point2f> AKAZE_obj, AKAZE_scene;
 			for (size_t i = 0; i < AKAZE_good_matches.size(); i++){
@@ -447,6 +446,22 @@ namespace A005 {
 				}
 			}
 			cout << "Using AKAZE with SIFT... unique vs non-unique pts:\t" << obj_unique.size() << " vs " << obj.size() << endl;
+
+			vector<DMatch> matches(scene_unique.size());
+			for(size_t i = 0; i <scene_unique.size(); ++i)
+  				matches[i] = cv::DMatch(i, i, 0);
+			// make keypoints 
+			vector<KeyPoint> kp_left(scene_unique.size());
+			for(size_t i = 0; i < scene_unique.size(); ++i)
+				kp_left[i] = cv::KeyPoint(scene_unique[i], 1);
+
+			vector<KeyPoint> kp_right(obj_unique.size());
+			for(size_t i = 0; i < obj_unique.size(); ++i)
+				kp_right[i] = cv::KeyPoint(obj_unique[i], 1);
+			
+			Mat matches_drawing;
+			drawMatches(frame2, kp_left, frame1, kp_right, matches, matches_drawing, Scalar(0, 0, 255), Scalar(0, 0, 255)); imshow("All Matches",matches_drawing); waitKey(0);
+
 
 			/* Findind translation of f1 to find overlap area */
 			Mat H = findHomography(obj_unique,scene_unique,RANSAC);
