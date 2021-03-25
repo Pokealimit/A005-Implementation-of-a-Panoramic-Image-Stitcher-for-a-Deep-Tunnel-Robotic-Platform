@@ -37,10 +37,10 @@ namespace A005 {
 
 		// Stitching 2 frames
 		// frame1 (frame n+1) // frame2 (frame n)
-		static Mat stitch2frames(Mat frame1, Mat frame2);
+		static Mat stitch2frames(Mat frame1, Mat frame2, bool use_AKAZE);
 		// For checking distribution of feature points to see if good match before stitching
 		// frame1 (n+1) | frame2(n)
-		static int Check_Points_Distribution(Mat frame1, Mat frame2);
+		static int Check_Points_Distribution(Mat frame1, Mat frame2, bool use_AKAZE);
 		// Get current set Lowe's Ratio
 		static float get_ratio();
 		// changing lowe's ratio number

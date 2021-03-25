@@ -12,12 +12,11 @@ float power9(float x) { return x * x * x * x * x * x * x * x * x; }
 
 namespace A005 {
 
-	Mat stitching_program::stitch2frames(Mat frame1, Mat frame2) {
-		Mat frame1_gray, frame2_gray;													// Storing frames
+	Mat stitching_program::stitch2frames(Mat frame1, Mat frame2, bool use_AKAZE) {
+		Mat frame1_gray, frame2_gray;																// Storing frames
 		vector<Point2f> edge_points, obj, scene;													// Store points
 		vector <KeyPoint> keypoints1, keypoints2;													// Storing keypoints
 		Mat des1, des2,result;																		// Storing Descriptors and results (some of the mat not in used - copied over from another stitching sln)
-		// Mat G(3, 3, CV_64FC1);																	// For Storing Transformation Matrix of x translation
 		Ptr<SIFT> detector = SIFT::create();														// Initialise Sift Detector
 		Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create(DescriptorMatcher::FLANNBASED);	// Initialise FLANN Matcher
 		vector<vector<DMatch>> matches;																// Store matches
@@ -33,8 +32,8 @@ namespace A005 {
 		edge_points.push_back(Point2f(frame1.cols,frame1.rows));
 
 		// create a mask for ROI of feature detector - as there is no need to find keypoints of previous part of stitched image
-		Mat mask = Mat::zeros(Size(frame2.cols, frame2.rows), CV_8UC1);
-		rectangle(mask, cvPoint(frame2.cols - frame1.cols, 0), cvPoint(frame2.cols, frame2.rows), 255, -1);
+		// Mat mask = Mat::zeros(Size(frame2.cols, frame2.rows), CV_8UC1);
+		// rectangle(mask, cvPoint(frame2.cols - frame1.cols, 0), cvPoint(frame2.cols, frame2.rows), 255, -1);
 		// Compute feature points and descriptors
 		detector->detectAndCompute(frame1_gray, noArray(), keypoints1, des1);
 		detector->detectAndCompute(frame2_gray, noArray(), keypoints2, des2);
@@ -49,12 +48,14 @@ namespace A005 {
 			}
 		}
 		// Draw lines of good matches
-		drawMatches(frame1, keypoints1, frame2, keypoints2, good_matches, result, Scalar(0, 0, 255), Scalar(0, 0, 255));
+		// drawMatches(frame1, keypoints1, frame2, keypoints2, good_matches, result, Scalar(0, 0, 255), Scalar(0, 0, 255));
+
 		// -- Get the keypoints from the good matches
 		for (size_t i = 0; i < good_matches.size(); i++){
 			obj.push_back(keypoints1[good_matches[i].queryIdx].pt);
 			scene.push_back(keypoints2[good_matches[i].trainIdx].pt);
 		}
+
 
 		// find homography
 		Mat H = findHomography(obj,scene,RANSAC);
@@ -364,7 +365,7 @@ namespace A005 {
 		return result;
 	}
 
-	int stitching_program::Check_Points_Distribution(Mat frame1, Mat frame2){
+	int stitching_program::Check_Points_Distribution(Mat frame1, Mat frame2, bool use_AKAZE){
 		Mat frame1_gray, frame2_gray;																// Storing frames
 		vector<Point2f> edge_points, obj, scene;													// Store points
 		vector <KeyPoint> keypoints1, keypoints2;													// Storing keypoints
@@ -399,92 +400,234 @@ namespace A005 {
 			scene.push_back(keypoints2[good_matches[i].trainIdx].pt);
 		}
 
-		/* Findind translation of f1 to find overlap area */
-		Mat H = findHomography(obj,scene,RANSAC);
-		double x_trans = (H.at<double>(0,2) > H.at<double>(2,0)) ? H.at<double>(0,2) : H.at<double>(2,0);
-		cout << "x_trans = " << x_trans << endl;
-		double overlap_area = (frame2.cols - x_trans) * frame2.rows;
-		
-		/* K Means Clustering */
-		Mat labels, centers;
-		int K=2, attempts=10, flags=KMEANS_RANDOM_CENTERS;
-		TermCriteria tc;
-		kmeans(obj,K,labels,tc,attempts,flags,centers);
-		Mat centers_points = centers.reshape(2,centers.rows);
+		/* AKAZE Feature Detector */
+		if(use_AKAZE){
+			vector<KeyPoint> AKAZE_keypoints_1, AKAZE_keypoints_2;
+			Mat AKAZE_descriptors_1, AKAZE_descriptors_2;
+			vector<vector<DMatch> > AKAZE_matches;
+			// vector<DMatch> ORB_matches;
+			vector<DMatch> AKAZE_good_matches;
+			Ptr<AKAZE> AKAZE_detector = AKAZE::create();
+			// Ptr<DescriptorMatcher> AKAZE_matcher  = DescriptorMatcher::create ( "" );
+			BFMatcher AKAZE_matcher(NORM_HAMMING);
+			// cout << "Creating ORB" << endl;
+			// Ptr<DescriptorMatcher> ORB_matcher = DescriptorMatcher::create(DescriptorMatcher::FLANNBASED);
+			AKAZE_detector -> detectAndCompute(frame1_gray, noArray(), AKAZE_keypoints_1, AKAZE_descriptors_1);
+			AKAZE_detector -> detectAndCompute(frame2_gray, noArray(), AKAZE_keypoints_2, AKAZE_descriptors_2);
+			// cout << "Detect and compute..." << endl;
+			// ORB_matcher -> match ( ORB_descriptors_1, ORB_descriptors_2, ORB_matches );
+			AKAZE_matcher.knnMatch(AKAZE_descriptors_1, AKAZE_descriptors_2, AKAZE_matches, 2);
+			// cout<< "matching..." << endl;
+			// only get good matching points using Lowe's ratio test
+			for (int i = 0; i < AKAZE_matches.size(); ++i)
+			{
+				if (AKAZE_matches[i][0].distance < ratio * AKAZE_matches[i][1].distance)
+					AKAZE_good_matches.push_back(AKAZE_matches[i][0]);
+				// if (ORB_matches[i].distance < ratio * ORB_matches[i].distance)
+				// 	ORB_good_matches.push_back(ORB_matches[i]);
+			}
+			// drawMatches(frame1, AKAZE_keypoints_1, frame2, AKAZE_keypoints_2, AKAZE_good_matches, result, Scalar(0, 0, 255), Scalar(0, 0, 255));
+			// imshow("AKAZE matches",result); waitKey(0);
+			// cout << "found good matches..." << endl;
+			vector<Point2f> AKAZE_obj, AKAZE_scene;
+			for (size_t i = 0; i < AKAZE_good_matches.size(); i++){
+				obj.push_back(AKAZE_keypoints_1[AKAZE_good_matches[i].queryIdx].pt);
+				scene.push_back(AKAZE_keypoints_2[AKAZE_good_matches[i].trainIdx].pt);
+			}
 
-		Scalar colorTab[] =
-    	{
-        Scalar(0, 0, 255),
-        Scalar(0,255,0),
-        Scalar(255,100,100),
-        Scalar(255,0,255),
-        Scalar(0,255,255)
-    	};
+			/* Checking for duplicate points */
+			vector <Point2f> obj_unique, scene_unique;
+			for (size_t i=0; i<scene.size(); i++){
+				for (size_t j=i+1; j <= scene.size(); j++){
+					if( scene[i] == scene[j]) break;
+					else if( j== scene.size() ){
+						scene_unique.push_back(scene[i]);
+						obj_unique.push_back(obj[i]);
+					}
+				}
+			}
+			cout << "Using AKAZE with SIFT... unique vs non-unique pts:\t" << obj_unique.size() << " vs " << obj.size() << endl;
 
-		Mat drawing;
-		drawing = frame1.clone();
-		vector<Point2f> contour0, contour1;	
-		
-		cout << "Centers Points :\n" << centers_points << endl;
+			/* Findind translation of f1 to find overlap area */
+			Mat H = findHomography(obj_unique,scene_unique,RANSAC);
+			double x_trans = (H.at<double>(0,2) > H.at<double>(2,0)) ? H.at<double>(0,2) : H.at<double>(2,0);
+			cout << "x_trans = " << x_trans << endl;
+			double overlap_area = (frame2.cols - x_trans) * frame2.rows;
+			
+			/* K Means Clustering */
+			Mat labels, centers;
+			int K=2, attempts=10, flags=KMEANS_RANDOM_CENTERS;
+			TermCriteria tc;
+			kmeans(obj_unique,K,labels,tc,attempts,flags,centers);
+			Mat centers_points = centers.reshape(2,centers.rows);
 
-		// for drawing cluster center points
-		for(int i=0; i < centers_points.rows; i++)
-			circle(drawing,centers_points.at<Point2f>(i),1,colorTab[2],5,8,0);
-		
-		// cout << "labels :" << endl << labels << endl;
+			Scalar colorTab[] =
+			{
+			Scalar(0, 0, 255),
+			Scalar(0,255,0),
+			Scalar(255,100,100),
+			Scalar(255,0,255),
+			Scalar(0,255,255)
+			};
 
-		// for drawing good matching points
-		for( int i = 0; i < obj.size(); i++ )
-        {
-            int clusterIdx = labels.at<int>(i);
-            // circle( drawing, obj[i], 2, colorTab[clusterIdx], FILLED, LINE_AA );
-			circle(drawing,obj[i],1,colorTab[clusterIdx],5,8,0);
+			Mat drawing;
+			drawing = frame1.clone();
+			vector<Point2f> contour0, contour1;	
+			
+			cout << "Centers Points :\n" << centers_points << endl;
 
-			if(clusterIdx) contour1.push_back(obj[i]);
-			else contour0.push_back(obj[i]);
-        }
+			// for drawing cluster center points
+			for(int i=0; i < centers_points.rows; i++)
+				circle(drawing,centers_points.at<Point2f>(i),1,colorTab[2],5,8,0);
+			
+			// cout << "labels :" << endl << labels << endl;
 
-		// for calculating area of clusters
-		double area0 = contourArea(contour0);
-		double area1 = contourArea(contour1);
-		vector<vector<Point> > contours;
-		vector<Point> approx0, approx1;
-		approxPolyDP(contour0, approx0, 5, true);
-		approxPolyDP(contour1, approx1, 5, true);
-		double approx0_area = contourArea(approx0);
-		double approx1_area = contourArea(approx1);
+			// for drawing good matching points
+			for( int i = 0; i < obj_unique.size(); i++ )
+			{
+				int clusterIdx = labels.at<int>(i);
+				// circle( drawing, obj[i], 2, colorTab[clusterIdx], FILLED, LINE_AA );
+				circle(drawing,obj_unique[i],1,colorTab[clusterIdx],5,8,0);
 
-		contours.push_back(approx0);
-		contours.push_back(approx1);
+				if(clusterIdx) contour1.push_back(obj_unique[i]);
+				else contour0.push_back(obj_unique[i]);
+			}
 
-		cout << "area0 = " << area0 << endl << "approx0_area =" << approx0_area << endl; //<< "approx poly vertices" << approx0.size() << endl;
-		cout << "area1 = " << area1 << endl << "approx1_area =" << approx1_area << endl; //<< "approx poly vertices" << approx1.size() << endl;
-		cout << "overlapped area = " << overlap_area << endl;
-		cout << "percentage area (approx) = " << ( (approx0_area + approx1_area) / overlap_area ) * 100 << " %" << endl;
+			// for calculating area of clusters
+			double area0 = contourArea(contour0);
+			double area1 = contourArea(contour1);
+			vector<vector<Point> > contours;
+			vector<Point> approx0, approx1;
+			approxPolyDP(contour0, approx0, 5, true);
+			approxPolyDP(contour1, approx1, 5, true);
+			double approx0_area = contourArea(approx0);
+			double approx1_area = contourArea(approx1);
 
-		drawContours(drawing,contours,0,colorTab[3],2);
-		drawContours(drawing,contours,1,colorTab[3],2);
-		// imshow("Area covered by approx",drawing); waitKey(0);
+			contours.push_back(approx0);
+			contours.push_back(approx1);
 
-		vector<vector<Point> > hull(contours.size());
-		for(size_t i=0; i<contours.size(); i++)
-			convexHull(contours[i],hull[i]);
+			cout << "area0 = " << area0 << endl << "approx0_area =" << approx0_area << endl; //<< "approx poly vertices" << approx0.size() << endl;
+			cout << "area1 = " << area1 << endl << "approx1_area =" << approx1_area << endl; //<< "approx poly vertices" << approx1.size() << endl;
+			cout << "overlapped area = " << overlap_area << endl;
+			cout << "percentage area (approx) = " << ( (approx0_area + approx1_area) / overlap_area ) * 100 << " %" << endl;
 
-		drawContours(drawing,hull,0,colorTab[4],2);
-		drawContours(drawing,hull,1,colorTab[4],2);
+			drawContours(drawing,contours,0,colorTab[3],2);
+			drawContours(drawing,contours,1,colorTab[3],2);
+			// imshow("Area covered by approx",drawing); waitKey(0);
 
-		double hull0_area = contourArea(hull[0]);
-		double hull1_area = contourArea(hull[1]);
-		cout << "hull0_area =" << hull0_area << endl;
-		cout << "hull1_area =" << hull1_area << endl;
-		cout << "percentage area (hull) = " << ( (hull0_area + hull1_area) / overlap_area ) * 100 << " %" << endl;
+			vector<vector<Point> > hull(contours.size());
+			for(size_t i=0; i<contours.size(); i++)
+				convexHull(contours[i],hull[i]);
 
-		// imshow("Actual area covered vs approx",drawing); waitKey(0);
-		// return 1;
-		// return drawing;
-		if( (hull0_area + hull1_area) / overlap_area > 0.5 && contour0.size() > 40 && contour1.size() > 40 ) return 1;
-		else return 0;
+			drawContours(drawing,hull,0,colorTab[4],2);
+			drawContours(drawing,hull,1,colorTab[4],2);
 
+			double hull0_area = contourArea(hull[0]);
+			double hull1_area = contourArea(hull[1]);
+			cout << "hull0_area =" << hull0_area << endl;
+			cout << "hull1_area =" << hull1_area << endl;
+			cout << "percentage area (hull) = " << ( (hull0_area + hull1_area) / overlap_area ) * 100 << " %" << endl;
+			cout << "no. of matched points in C1=\t" << contour0.size() << endl;
+			cout << "no. of matched points in C2=\t" << contour1.size() << endl;
+
+			imshow("Actual area covered vs approx",drawing); waitKey(0);
+			// return 1;
+			// return drawing;
+			if( (hull0_area + hull1_area) / overlap_area > 0.5 && contour0.size() > 40 && contour1.size() > 40 ) return 1;
+			else return 0;
+		}
+
+		else{
+			cout << "Not using AKAZE with SIFT... No of points:\t" << obj.size() << endl;
+			/* Findind translation of f1 to find overlap area */
+			Mat H = findHomography(obj,scene,RANSAC);
+			double x_trans = (H.at<double>(0,2) > H.at<double>(2,0)) ? H.at<double>(0,2) : H.at<double>(2,0);
+			cout << "x_trans = " << x_trans << endl;
+			double overlap_area = (frame2.cols - x_trans) * frame2.rows;
+			
+			/* K Means Clustering */
+			Mat labels, centers;
+			int K=2, attempts=10, flags=KMEANS_RANDOM_CENTERS;
+			TermCriteria tc;
+			kmeans(obj,K,labels,tc,attempts,flags,centers);
+			Mat centers_points = centers.reshape(2,centers.rows);
+
+			Scalar colorTab[] =
+			{
+			Scalar(0, 0, 255),
+			Scalar(0,255,0),
+			Scalar(255,100,100),
+			Scalar(255,0,255),
+			Scalar(0,255,255)
+			};
+
+			Mat drawing;
+			drawing = frame1.clone();
+			vector<Point2f> contour0, contour1;	
+			
+			cout << "Centers Points :\n" << centers_points << endl;
+
+			// for drawing cluster center points
+			for(int i=0; i < centers_points.rows; i++)
+				circle(drawing,centers_points.at<Point2f>(i),1,colorTab[2],5,8,0);
+			
+			// cout << "labels :" << endl << labels << endl;
+
+			// for drawing good matching points
+			for( int i = 0; i < obj.size(); i++ )
+			{
+				int clusterIdx = labels.at<int>(i);
+				// circle( drawing, obj[i], 2, colorTab[clusterIdx], FILLED, LINE_AA );
+				circle(drawing,obj[i],1,colorTab[clusterIdx],5,8,0);
+
+				if(clusterIdx) contour1.push_back(obj[i]);
+				else contour0.push_back(obj[i]);
+			}
+
+			// for calculating area of clusters
+			double area0 = contourArea(contour0);
+			double area1 = contourArea(contour1);
+			vector<vector<Point> > contours;
+			vector<Point> approx0, approx1;
+			approxPolyDP(contour0, approx0, 5, true);
+			approxPolyDP(contour1, approx1, 5, true);
+			double approx0_area = contourArea(approx0);
+			double approx1_area = contourArea(approx1);
+
+			contours.push_back(approx0);
+			contours.push_back(approx1);
+
+			cout << "area0 = " << area0 << endl << "approx0_area =" << approx0_area << endl; //<< "approx poly vertices" << approx0.size() << endl;
+			cout << "area1 = " << area1 << endl << "approx1_area =" << approx1_area << endl; //<< "approx poly vertices" << approx1.size() << endl;
+			cout << "overlapped area = " << overlap_area << endl;
+			cout << "percentage area (approx) = " << ( (approx0_area + approx1_area) / overlap_area ) * 100 << " %" << endl;
+
+			drawContours(drawing,contours,0,colorTab[3],2);
+			drawContours(drawing,contours,1,colorTab[3],2);
+			// imshow("Area covered by approx",drawing); waitKey(0);
+
+			vector<vector<Point> > hull(contours.size());
+			for(size_t i=0; i<contours.size(); i++)
+				convexHull(contours[i],hull[i]);
+
+			drawContours(drawing,hull,0,colorTab[4],2);
+			drawContours(drawing,hull,1,colorTab[4],2);
+
+			double hull0_area = contourArea(hull[0]);
+			double hull1_area = contourArea(hull[1]);
+			cout << "hull0_area =" << hull0_area << endl;
+			cout << "hull1_area =" << hull1_area << endl;
+			cout << "percentage area (hull) = " << ( (hull0_area + hull1_area) / overlap_area ) * 100 << " %" << endl;
+			cout << "no. of matched points in C1=\t" << contour0.size() << endl;
+			cout << "no. of matched points in C2=\t" << contour1.size() << endl;
+
+			imshow("Actual area covered vs approx",drawing); waitKey(0);
+			// return 1;
+			// return drawing;
+			if( (hull0_area + hull1_area) / overlap_area > 0.5 && contour0.size() > 40 && contour1.size() > 40 ) return 1;
+			else return 0;
+
+		}
 		/* Hierachical Clustering */
 		// cvflann::KMeansIndexParams kmean_params(32,100,cvflann::FLANN_CENTERS_KMEANSPP);
 		// // cvflann::KMeansIndexParams kmean_params(32,100,cvflann::FLANN_CENTERS_RANDOM);
@@ -627,8 +770,8 @@ namespace A005 {
 		// for(size_t i=0; i<ORB_obj.size();i++)
 		// 	circle(drawing_comparison,ORB_obj[i],1,colorTab[2],5,8,0);
 		// imshow("SIFT vs AKAZE vs ORB",drawing_comparison); waitKey(0);
-
-		return 1;		
+		
+		return 0;
 	}
 
 	// initalizers
